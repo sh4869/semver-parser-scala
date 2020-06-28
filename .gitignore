@@ -1,6 +1,11 @@
 
-# Created by https://www.gitignore.io/api/scala,sbt
-# Edit at https://www.gitignore.io/?templates=scala,sbt
+# Created by https://www.toptal.com/developers/gitignore/api/scala,sbt,metals
+# Edit at https://www.toptal.com/developers/gitignore?templates=scala,sbt,metals
+
+### Metals ###
+.metals/
+.bloop/
+project/metals.sbt
 
 ### SBT ###
 # Simple Build Tool
@@ -20,7 +25,4 @@ project/plugins/project/
 *.class
 *.log
 
-# End of https://www.gitignore.io/api/scala,sbt
-
-.idea/
-null/
+# End of https://www.toptal.com/developers/gitignore/api/scala,sbt,metals
