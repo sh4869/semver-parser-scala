@@ -5,6 +5,15 @@ import scala.util.parsing.combinator._
 
 import CommonParser._
 
+/**
+  * Semantic Version
+  *
+  * @param major major number
+  * @param minor minor number
+  * @param patch patch number
+  * @param preRelease preRelease(optional)
+  * @param build build(optional)
+  */
 case class SemVer(
     major: Long,
     minor: Long,
@@ -12,15 +21,15 @@ case class SemVer(
     preRelease: Option[String],
     build: Option[String]
 ) extends Ordered[SemVer] {
-
   def original =
     s"$major.$minor.$patch${preRelease.map(x => s"-$x").getOrElse("")}${build.map(x => s"+$x").getOrElse("")}"
 
   /**
+    * compare whit version
     * see https://semver.org/#spec-item-11
     *
-    * @param that
-    * @return
+    * @param that SemVer
+    * @return >
     */
   def compare(that: SemVer): Int = {
     if (that.major != major) major.compare(that.major)

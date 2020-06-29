@@ -3,9 +3,26 @@ package net.sh4869.semver_parser
 import scala.util.parsing.combinator._
 
 import CommonParser._
+
+/**
+  * Version Range
+  */
 trait Range {
+
+  /**
+    * check that version is valid
+    *
+    * @param version target
+    * @return version is valid
+    */
   def valid(version: SemVer): Boolean
 
+  /**
+    * check that version is invalid
+    *
+    * @param version target
+    * @return version is invalid
+    */
   def invalid(version: SemVer): Boolean = !valid(version)
 }
 
@@ -88,10 +105,24 @@ object Range {
     }
   }
 
+  /**
+    * Simple Range
+    *
+    * ex: "1.0.0","2.3.5", "1.0.x", "1.x", "x"
+    *
+    * @param range
+    */
   case class SimpleRange(range: VersionRange) extends Range {
     def valid(version: SemVer) = basic_valid(range, version)
   }
 
+  /**
+    * Hat Range
+    *
+    * ex: "^1.0.0","^2.3.5", "^1.0.x", "^1.x", "^x"
+    *
+    * @param range
+    */
   case class HatRange(range: VersionRange) extends Range {
     def valid(version: SemVer) = {
       lazy val nonExtra = version.build.isEmpty && version.preRelease.isEmpty
@@ -132,6 +163,13 @@ object Range {
     }
   }
 
+  /**
+    * Simple Range
+    *
+    * ex: "~1.0.0","~2.3.5", "~1.0.x", "~1.x", "~x"
+    *
+    * @param range
+    */
   case class TildeRange(range: VersionRange) extends Range {
     def valid(version: SemVer) = {
       lazy val nonExtra = version.build.isEmpty && version.preRelease.isEmpty
@@ -150,6 +188,14 @@ object Range {
     }
   }
 
+  /**
+    * Hyphen Range
+    *
+    * ex: "1.0.0 - 2.0.0", "3.0.0 - 4.3.5", "1.x - 2.3.0"
+    *
+    * @param left
+    * @param right
+    */
   case class HyphenRange(left: VersionRange, right: VersionRange) extends Range {
     // see https://github.com/npm/node-semver#hyphen-ranges-xyz---abc
     lazy val alter = AndRange(List(ConditionExpressionRange(left, >=), ConditionExpressionRange(right, <=)))
@@ -163,6 +209,14 @@ object Range {
   private[semver_parser] object <= extends Condition
   private[semver_parser] object \= extends Condition
 
+  /**
+    * Condition Range
+    *
+    * ex: "> 1.0.0", ">= 2.3.0", "< 1.x", "> 2.x"
+    *
+    * @param range
+    * @param con
+    */
   case class ConditionExpressionRange(range: VersionRange, con: Condition) extends Range {
     def valid(version: SemVer): Boolean = {
       lazy val nonExtra = version.build.isEmpty && version.preRelease.isEmpty
@@ -252,10 +306,24 @@ object Range {
     }
   }
 
+  /**
+    * And Range
+    *
+    * ex: "> 1.0.0 < 2.0.0", "^2.0.0 > 3.0.0"
+    *
+    * @param ranges
+    */
   case class AndRange(ranges: List[Range]) extends Range {
     def valid(version: SemVer): Boolean = ranges.forall(_.valid(version))
   }
 
+  /**
+    * Or Range
+    *
+    * ex: "1.0.0 || 2.0.0", "2.3.0 - 4.0.0 || 2.0.0"
+    *
+    * @param ranges
+    */
   case class OrRange(ranges: List[Range]) extends Range {
     def valid(version: SemVer): Boolean = ranges.exists(_.valid(version))
   }
