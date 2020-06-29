@@ -1,6 +1,16 @@
 # semver-parser-scala
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.sh4869/semver-parser-scala)](https://search.maven.org/artifact/com.github.sh4869/semver-parser-scala_2.13/0.0.1/jar)
+
 [Semantic Versioning](http://semver.org/) and Range Library for Scala.
+
+# Install
+
+```scala
+libraryDependencies += "com.github.sh4869" % "semver-parser-scala" % "0.0.1"
+```
+
+# How to use
 
 ```scala
 import com.github.sh4869.semver_parser.{SemVer, Range}
@@ -62,10 +72,7 @@ Range("> 1.0.0 < 2.0.0").valid(SemVer("1.5.0")) // And Range
 Range("1.0.0 || 2.0.0").valid(SemVer("2.0.0")) // Or Range
 ```
 
-# Install
-
-TODO
-
 # TODO
 
 - copy test from [node-semver](https://github.com/npm/node-semver)
+- setting ci
