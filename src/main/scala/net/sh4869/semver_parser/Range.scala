@@ -5,6 +5,8 @@ import scala.util.parsing.combinator._
 import CommonParser._
 trait Range {
   def valid(version: SemVer): Boolean
+
+  def invalid(version: SemVer): Boolean = !valid(version)
 }
 
 // https://github.com/npm/node-semver#range-grammar
@@ -12,15 +14,16 @@ private object RangeParser extends CommonParser {
   import Range._
 
   def xr: Parser[Xr] = """\*|x|X""".r ^^ (_ => AnyR) | num_identifier ^^ (x => NumR(x))
+
   def range: Parser[VersionRange] =
-    xr ~ ("." ~> xr).? ~ ("." ~> xr).? ^^ {
-      case major ~ minor ~ patch => VersionRange(Some(major), minor, patch, None)
-    } | xr ~ ("." ~> xr) ~ ("." ~> xr) ~ ("-" ~> prerelease_identifier).? ~ ("+" ~> build_identifier).? ^^ {
+    xr ~ ("." ~> xr) ~ ("." ~> xr) ~ ("-" ~> prerelease_identifier).? ~ ("+" ~> build_identifier).? ^^ {
       case major ~ minor ~ patch ~ preRelease ~ _ => VersionRange(Some(major), Some(minor), Some(patch), preRelease)
+    } | xr ~ ("." ~> xr).? ~ ("." ~> xr).? ^^ {
+      case major ~ minor ~ patch => VersionRange(Some(major), minor, patch, None)
     }
 
   def conditon: Parser[Condition] =
-    ">" ^^ (_ => >) | ">=" ^^ (_ => >=) | "<" ^^ (_ => <) | "<=" ^^ (_ => <=) | "=" ^^ (_ => \=)
+    ">=" ^^ (_ => >=) | ">" ^^ (_ => >) | "<=" ^^ (_ => <=) | "<" ^^ (_ => <) | "=" ^^ (_ => \=)
 
   def conditonRange: Parser[ConditionExpressionRange] = conditon ~ whiteSpace.? ~ range ^^ {
     case con ~ _ ~ range => ConditionExpressionRange(range, con)
@@ -28,17 +31,23 @@ private object RangeParser extends CommonParser {
 
   def hatRange: Parser[HatRange] = "^" ~> whiteSpace.? ~> range ^^ { range => HatRange(range) }
 
-  def caretRange: Parser[TildeRange] = "~" ~> whiteSpace.? ~> range ^^ { range => TildeRange(range) }
+  def tildeRange: Parser[TildeRange] = "~" ~> whiteSpace.? ~> range ^^ { range => TildeRange(range) }
 
   def emptyRange: Parser[Range] = """^$""".r ^^ { _ => SimpleRange(VersionRange(None, None, None, None)) }
 
-  def baseRange: Parser[Range] = conditonRange | hatRange | caretRange | range ^^ { x => SimpleRange(x) } | emptyRange
+  def hyphenRange: Parser[Range] = range ~ (whiteSpace ~ "-" ~ whiteSpace) ~ range ^^ {
+    case l ~ _ ~ r => HyphenRange(l, r)
+  }
+
+  def baseRange: Parser[Range] = conditonRange | hatRange | tildeRange | range ^^ { x => SimpleRange(x) } | emptyRange
 
   def andRange: Parser[Range] = (whiteSpace.? ~> baseRange) ~ rep(whiteSpace ~> baseRange) ^^ {
     case x ~ xs => AndRange(x +: xs)
   }
 
-  def orRange: Parser[Range] = andRange ~ rep("||" ~> andRange) ^^ {
+  def orBaseRange: Parser[Range] = hyphenRange | andRange
+
+  def orRange: Parser[Range] = orBaseRange ~ rep(whiteSpace.? ~> "||" ~> whiteSpace.? ~> orBaseRange) ^^ {
     case x ~ xs => OrRange(x +: xs)
   }
 
@@ -87,6 +96,13 @@ object Range {
     def valid(version: SemVer) = {
       lazy val nonExtra = version.build.isEmpty && version.preRelease.isEmpty
       (range.major, range.minor, range.patch, range.preRelease) match {
+        // ex: "^0.0.1", "^0.0.3"
+        case (Some(NumR(0)), Some(NumR(0)), Some(NumR(patch)), None) =>
+          version.major == 0 && version.minor == 0 && version.patch == patch && nonExtra
+        // ex: "^0.0.1-rc.1"
+        case (Some(NumR(0)), Some(NumR(0)), Some(NumR(patch)), Some(pre)) =>
+          version.major == 0 && version.minor == 0 && version.patch == patch &&
+            (version.preRelease.isEmpty || comparePreRelease(version.preRelease, range.preRelease) >= 0)
         // ex: "^0.1.0", "^0.3.0"
         // "^0.1.0" == "~0.1.0"
         case (Some(NumR(0)), Some(NumR(minor)), Some(NumR(patch)), None) =>
@@ -97,11 +113,17 @@ object Range {
             (version.preRelease.isEmpty || comparePreRelease(version.preRelease, range.preRelease) >= 0)
         // ex: "^1.1.0", "^1.1.1"
         case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
-          version.major == major && version.minor >= minor && version.patch >= patch && nonExtra
+          version.major == major && (version.minor > minor || version.minor >= minor && version.patch >= patch) && nonExtra
         // ex: "^1.0.0-rc.1"
-        case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(_)) =>
-          version.major == major && version.minor >= minor && version.patch >= patch &&
-            (version.preRelease.isEmpty || comparePreRelease(version.preRelease, range.preRelease) >= 0)
+        case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(preRelease)) =>
+          (version.major == major && (version.minor > minor || version.minor >= minor && version.patch >= patch) && nonExtra) ||
+            // only when [major minor patch] is same, compare preRelease
+            (version.major == major && version.minor == minor && version.patch == patch && version.preRelease.exists(
+              x => comparePreRelease(Some(x), Some(preRelease)) >= 0
+            ))
+        // ex: "^0.0.x", "^0.1.x"
+        case (Some(NumR(0)), Some(NumR(minor)), Some(AnyR), None) =>
+          version.major == 0 && version.minor == minor && nonExtra
         // ex: "^1.0.x", "^1.3.x"
         case (Some(NumR(major)), Some(NumR(minor)), Some(AnyR), None) =>
           version.major == major && version.minor >= minor && nonExtra
@@ -118,12 +140,20 @@ object Range {
         case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
           version.major == major && version.minor == minor && version.patch >= patch && nonExtra
         // ex: "~1.0.0-rc.1"
-        case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(_)) =>
-          version.major == major && version.minor == minor && version.patch >= patch &&
-            (version.preRelease.isEmpty || comparePreRelease(version.preRelease, range.preRelease) >= 0)
+        case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(pre)) =>
+          (version.major == major && version.minor == minor && version.patch >= patch && nonExtra) ||
+            (version.major == major && version.minor == minor && version.patch == patch && version.preRelease.exists(
+              x => comparePreRelease(Some(x), Some(pre)) >= 0
+            ))
         case _ => basic_valid(range, version)
       }
     }
+  }
+
+  case class HyphenRange(left: VersionRange, right: VersionRange) extends Range {
+    // see https://github.com/npm/node-semver#hyphen-ranges-xyz---abc
+    lazy val alter = AndRange(List(ConditionExpressionRange(left, >=), ConditionExpressionRange(right, <=)))
+    def valid(version: SemVer) = alter.valid(version)
   }
 
   private[semver_parser] sealed trait Condition
@@ -154,7 +184,7 @@ object Range {
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
               (version.major > major || (version.major == major && version.minor > minor) || (version.major == major && version.minor == minor && version.patch > patch)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(preRelease)) =>
-              (version.major > major || (version.major == major && version.minor > minor) || (version.major == major && version.minor == minor && version.patch > patch)) &&
+              (version.major == major && version.minor == minor && version.patch == patch) &&
                 comparePreRelease(version.preRelease, range.preRelease) > 0
           }
         }
@@ -167,14 +197,14 @@ object Range {
             case (Some(NumR(major)), Some(AnyR), _, _) => version.major >= major && nonExtra
             // ex: ">= 1.0.x", ">= 1.0"
             case (Some(NumR(major)), Some(NumR(minor)), Some(AnyR), _) =>
-              (version.major >= major || (version.major == major && version.minor >= minor)) && nonExtra
+              (version.major > major || (version.major == major && version.minor >= minor)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), None, _) =>
-              (version.major >= major || (version.major == major && version.minor >= minor)) && nonExtra
+              (version.major > major || (version.major == major && version.minor >= minor)) && nonExtra
             // ex: ">= 1.0.0", ">= 1.0.0-rc.0"
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
-              (version.major >= major || (version.major == major && version.minor >= minor) || (version.major == major && version.minor == minor && version.patch >= patch)) && nonExtra
+              (version.major > major || (version.major == major && version.minor > minor) || (version.major == major && version.minor == minor && version.patch >= patch)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(preRelease)) =>
-              (version.major >= major || (version.major == major && version.minor >= minor) || (version.major == major && version.minor == minor && version.patch >= patch)) &&
+              (version.major == major && version.minor == minor && version.patch == patch) &&
                 comparePreRelease(version.preRelease, range.preRelease) >= 0
           }
         }
@@ -194,7 +224,7 @@ object Range {
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
               (version.major < major || (version.major == major && version.minor < minor) || (version.major == major && version.minor == minor && version.patch < patch)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(preRelease)) =>
-              (version.major < major || (version.major == major && version.minor < minor) || (version.major == major && version.minor == minor && version.patch < patch)) &&
+              (version.major == major && version.minor == minor && version.patch == patch) &&
                 comparePreRelease(version.preRelease, range.preRelease) < 0
           }
         }
@@ -207,14 +237,14 @@ object Range {
             case (Some(NumR(major)), Some(AnyR), _, _) => version.major <= major && nonExtra
             // ex: "<= 1.0.x", "<= 1.0"
             case (Some(NumR(major)), Some(NumR(minor)), Some(AnyR), _) =>
-              (version.major <= major || (version.major == major && version.minor <= minor)) && nonExtra
+              (version.major < major || (version.major == major && version.minor <= minor)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), None, _) =>
-              (version.major <= major || (version.major == major && version.minor <= minor)) && nonExtra
+              (version.major < major || (version.major == major && version.minor <= minor)) && nonExtra
             // ex: "> 1.0.0", "> 1.0.0-rc.0"
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
-              (version.major <= major || (version.major == major && version.minor <= minor) || (version.major == major && version.minor == minor && version.patch <= patch)) && nonExtra
+              (version.major < major || (version.major == major && version.minor < minor) || (version.major == major && version.minor == minor && version.patch <= patch)) && nonExtra
             case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), Some(preRelease)) =>
-              (version.major <= major || (version.major == major && version.minor <= minor) || (version.major == major && version.minor == minor && version.patch <= patch)) &&
+              (version.major == major && version.minor == minor && version.patch == patch) &&
                 comparePreRelease(version.preRelease, range.preRelease) <= 0
           }
         }
@@ -234,5 +264,5 @@ object Range {
 
   def apply(str: String): Range =
     try { parse(str).get }
-    catch { throw new Error(s"range parse error: ${str}") }
+    catch { case _: Throwable => throw new Error(s"range parse error: ${str}") }
 }
