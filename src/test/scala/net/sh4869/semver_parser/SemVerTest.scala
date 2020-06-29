@@ -54,6 +54,7 @@ class SemVerTest extends AnyFunSuite with Matchers {
   test("other") {
     assert(parse("NG").isEmpty)
     assert(parse("aaaaa~~~~").isEmpty)
+    assert(parse("1.0.0 - alpha").isEmpty)
   }
 
   test("semver compareble") {
