@@ -4,6 +4,11 @@ import scala.util.Try
 import scala.util.parsing.combinator._
 
 class CommonParser extends JavaTokenParsers {
+
+  // dont skip whitespace
+  override def handleWhiteSpace(source: CharSequence, offset: Int): Int = {
+    offset
+  }
   def num_identifier: Parser[Int] = """(0|[1-9]\d*)""".r ^^ { _.toInt }
 
   def prerelease_identifier: Parser[String] =
