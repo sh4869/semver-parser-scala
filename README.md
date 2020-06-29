@@ -3,7 +3,7 @@
 [Semantic Versioning](http://semver.org/) and Range Library for Scala.
 
 ```scala
-import net.sh4869.semver_parser.{SemVer, Range}
+import com.github.sh4869.semver_parser.{SemVer, Range}
 val ver = SemVer("1.0.0")
 val ver2 = SemVer("1.2.0")
 val ver3 = SemVer("2.0.0")
@@ -19,7 +19,7 @@ assert(range.invalid(ver3))
 Support for [semantic versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
 ```scala
-import net.sh4869.semver_parser.SemVer
+import com.github.sh4869.semver_parser.SemVer
 
 SemVer("1.0.0")
 SemVer("1.0.1")
@@ -51,7 +51,7 @@ assert(SemVer("1.0.0-alpha") > SemVer("0.9.0"))
 Support range syntax of **npm**. see also [node-semver library description](https://github.com/npm/node-semver#advanced-range-syntax).
 
 ```scala
-import net.sh4869.semver_parser.Range
+import com.github.sh4869.semver_parser.Range
 
 Range("1.0.0").valid(SemVer("1.0.0")) // Simple Range
 Range("^1.0.0").valid(SemVer("1.2.0")) // Hat Range

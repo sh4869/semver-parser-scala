@@ -1,4 +1,4 @@
-package net.sh4869.semver_parser
+package com.github.sh4869.semver_parser
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.must.Matchers

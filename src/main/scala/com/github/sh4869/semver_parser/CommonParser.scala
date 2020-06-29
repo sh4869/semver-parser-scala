@@ -1,4 +1,4 @@
-package net.sh4869.semver_parser
+package com.github.sh4869.semver_parser
 
 import scala.util.Try
 import scala.util.parsing.combinator._
