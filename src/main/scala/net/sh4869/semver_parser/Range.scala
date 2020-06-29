@@ -44,8 +44,6 @@ private object RangeParser extends CommonParser {
 
   def range_parse(str: String): Option[Range] = parseAll(orRange, str) match {
     case Success(r, _) => Some(r)
-    case Error(msg, next) => println(msg); None
-    case Failure(msg, next) => println(msg); None
     case _             => None
   }
 }
@@ -89,6 +87,14 @@ object Range {
     def valid(version: SemVer) = {
       lazy val nonExtra = version.build.isEmpty && version.preRelease.isEmpty
       (range.major, range.minor, range.patch, range.preRelease) match {
+        // ex: "^0.1.0", "^0.3.0"
+        // "^0.1.0" == "~0.1.0"
+        case (Some(NumR(0)), Some(NumR(minor)), Some(NumR(patch)), None) =>
+          version.major == 0 && version.minor == minor && version.patch >= patch && nonExtra
+        // ex: "^0.1.0-rc.1"
+        case (Some(NumR(0)), Some(NumR(minor)), Some(NumR(patch)), Some(pre)) =>
+          version.major == 0 && version.minor == minor && version.patch >= patch &&
+            (version.preRelease.isEmpty || comparePreRelease(version.preRelease, range.preRelease) >= 0)
         // ex: "^1.1.0", "^1.1.1"
         case (Some(NumR(major)), Some(NumR(minor)), Some(NumR(patch)), None) =>
           version.major == major && version.minor >= minor && version.patch >= patch && nonExtra
@@ -225,4 +231,8 @@ object Range {
   }
 
   def parse(str: String) = RangeParser.range_parse(str)
+
+  def apply(str: String): Range =
+    try { parse(str).get }
+    catch { throw new Error(s"range parse error: ${str}") }
 }
