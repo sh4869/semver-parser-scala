@@ -2,7 +2,7 @@ package com.github.sh4869.semver_parser
 
 import scala.util.Try
 import scala.util.parsing.combinator._
-
+import scala.language.implicitConversions
 import CommonParser._
 
 /**
@@ -20,25 +20,9 @@ case class SemVer(
     patch: Long,
     preRelease: Option[String],
     build: Option[String]
-) extends Ordered[SemVer] {
+) {
   def original =
     s"$major.$minor.$patch${preRelease.map(x => s"-$x").getOrElse("")}${build.map(x => s"+$x").getOrElse("")}"
-
-  /**
-    * compare whit version
-    * see https://semver.org/#spec-item-11
-    *
-    * @param that SemVer
-    * @return >
-    */
-  def compare(that: SemVer): Int = {
-    if (that.major != major) major.compare(that.major)
-    else if (that.minor != minor) minor.compare(that.minor)
-    else if (that.patch != patch) patch.compare(that.patch)
-    else {
-      comparePreRelease(preRelease, that.preRelease)
-    }
-  }
 }
 
 private object SemVerParser extends CommonParser {
@@ -59,6 +43,18 @@ object SemVer {
   def parse(str: String): Option[SemVer] = SemVerParser.semver_parse(str)
 
   def apply(major: Long, minor: Long, patch: Long): SemVer = new SemVer(major, minor, patch, None, None)
+  implicit object SemVerOrdering extends Ordering[SemVer] {
+    override def compare(x: SemVer, y: SemVer): Int = {
+      if (x.major != y.major) x.major.compare(y.major)
+      else if (x.minor != y.minor) x.minor.compare(y.minor)
+      else if (x.patch != y.patch) x.patch.compare(y.patch)
+      else {
+        comparePreRelease(x.preRelease, y.preRelease)
+      }
+    }
+  }
+  
+  implicit def orderingToOrdered(v: SemVer) = Ordered.orderingToOrdered(v)(SemVerOrdering)
 
   def apply(original: String): SemVer =
     try { parse(original).get }
