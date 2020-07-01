@@ -1,7 +1,9 @@
 ThisBuild / organization := "com.github.sh4869"
 ThisBuild / name := "semver-parser"
-ThisBuild / version := "0.0.1"
+ThisBuild / version := "0.0.3"
 ThisBuild / scalaVersion := "2.13.1"
+
+ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.11", "2.13.1")
 
 ThisBuild / libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
@@ -10,7 +12,8 @@ ThisBuild / libraryDependencies ++= Seq(
 )
 
 scalacOptions ++= Seq(
-  "-deprecation"
+  "-deprecation",
+  "-feature"
 )
 
 ThisBuild / licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
