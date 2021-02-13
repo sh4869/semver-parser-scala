@@ -1,13 +1,13 @@
 # semver-parser-scala
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.github.sh4869/semver-parser-scala)](https://search.maven.org/artifact/com.github.sh4869/semver-parser-scala_2.13/0.0.1/jar)
+![Maven Central](https://img.shields.io/maven-central/v/com.github.sh4869/semver-parser-scala_2.13)
 
 [Semantic Versioning](http://semver.org/) and Range Library for Scala.
 
 # Install
 
 ```scala
-libraryDependencies += "com.github.sh4869" % "semver-parser-scala" % "0.0.1"
+libraryDependencies += "com.github.sh4869" % "semver-parser-scala" % "0.0.4"
 ```
 
 # How to use
