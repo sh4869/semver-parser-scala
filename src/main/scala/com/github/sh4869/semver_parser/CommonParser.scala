@@ -9,7 +9,7 @@ class CommonParser extends JavaTokenParsers {
   override def handleWhiteSpace(source: CharSequence, offset: Int): Int = {
     offset
   }
-  def num_identifier: Parser[Int] = """(0|[1-9]\d*)""".r ^^ { _.toInt }
+  def num_identifier: Parser[Long] = """(0|[1-9]\d*)""".r ^^ { _.toLong }
 
   def prerelease_identifier: Parser[String] =
     prerelease_identifier_content ~ rep("." ~> prerelease_identifier_content) ^^ {
@@ -17,11 +17,12 @@ class CommonParser extends JavaTokenParsers {
     }
 
   def prerelease_identifier_content: Parser[String] =
-    alphanumeric_identifier | num_identifier ^^ { _.toString }
+    alphanumeric_identifier
 
   def alphanumeric_identifier: Parser[String] =
     """([a-zA-Z\-][0-9a-zA-Z\-]*)""".r ^^ { _.toString() } |
-      """([0-9a-zA-Z\-]*[a-zA-Z\-][0-9a-zA-Z\-]*)""".r ^^ { _.toString() }
+      """([0-9a-zA-Z\-]*[a-zA-Z\-][0-9a-zA-Z\-]*)""".r ^^ { _.toString() } |
+      """(0|[1-9]\d*)""".r ^^ { _.toString() }
 
   def build_identifier: Parser[String] = build_identifier_content ~ rep("." ~> build_identifier_content) ^^ {
     case a ~ as => s"$a${if (as.isEmpty) "" else "." + as.mkString(".")}"
