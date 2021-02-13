@@ -31,8 +31,8 @@ class SemVerTest extends AnyFunSuite with Matchers {
     // Failed
     assert(parse("1.0.0-") == None) // Empty
     assert(parse("1.0.0-120x..a12") == None) // Empty
-    assert(parse("1.0.0-012") == None) // 0 start number
-    assert(parse("1.0.0-0120x.012") == None) // 0 start number
+    assert(parse("1.0.0-012") == Some(SemVer(1, 0, 0, Some("012"), None))) // 0 start number
+    assert(parse("1.0.0-0120x.012") == Some(SemVer(1, 0, 0, Some("0120x.012"), None))) // 0 start number
     assert(parse("1.0.0-_x_") == None) // invalit character
   }
 
