@@ -11,6 +11,8 @@ class SemVerTest extends AnyFunSuite with Matchers {
     assert(parse("0.0.1") == Some(SemVer(0, 0, 1, None, None)))
     assert(parse("100000.100000.100000") == Some(SemVer(100000, 100000, 100000, None, None)))
     assert(parse("123.456.789") == Some(SemVer(123, 456, 789, None, None)))
+    assert(parse("1.1.0-rc.20190924164006453") == Some(SemVer(1, 1, 0, Some("rc.20190924164006453"), None)))
+    assert(parse("1.201508240703.1") == Some(SemVer(1, 201508240703L, 1, None, None)))
     // Failed
     assert(parse("x.0.0") == None)
     assert(parse("1") == None)
@@ -29,8 +31,8 @@ class SemVerTest extends AnyFunSuite with Matchers {
     // Failed
     assert(parse("1.0.0-") == None) // Empty
     assert(parse("1.0.0-120x..a12") == None) // Empty
-    assert(parse("1.0.0-012") == None) // 0 start number
-    assert(parse("1.0.0-0120x.012") == None) // 0 start number
+    assert(parse("1.0.0-012") == Some(SemVer(1, 0, 0, Some("012"), None))) // 0 start number
+    assert(parse("1.0.0-0120x.012") == Some(SemVer(1, 0, 0, Some("0120x.012"), None))) // 0 start number
     assert(parse("1.0.0-_x_") == None) // invalit character
   }
 

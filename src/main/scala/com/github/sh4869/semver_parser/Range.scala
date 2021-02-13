@@ -30,10 +30,10 @@ trait Range {
 private object RangeParser extends CommonParser {
   import Range._
 
-  def xr: Parser[Xr] = """\*|x|X""".r ^^ (_ => AnyR) | num_identifier ^^ (x => NumR(x))
+  def xr: Parser[Xr] = """\*|x|X|latest""".r ^^ (_ => AnyR) | num_identifier ^^ (x => NumR(x))
 
   def range: Parser[VersionRange] =
-    xr ~ ("." ~> xr) ~ ("." ~> xr) ~ ("-" ~> prerelease_identifier).? ~ ("+" ~> build_identifier).? ^^ {
+    "v".? ~> xr ~ ("." ~> xr) ~ ("." ~> xr) ~ ("-" ~> prerelease_identifier).? ~ ("+" ~> build_identifier).? ^^ {
       case major ~ minor ~ patch ~ preRelease ~ _ => VersionRange(Some(major), Some(minor), Some(patch), preRelease)
     } | xr ~ ("." ~> xr).? ~ ("." ~> xr).? ^^ {
       case major ~ minor ~ patch => VersionRange(Some(major), minor, patch, None)
@@ -48,7 +48,7 @@ private object RangeParser extends CommonParser {
 
   def hatRange: Parser[HatRange] = "^" ~> whiteSpace.? ~> range ^^ { range => HatRange(range) }
 
-  def tildeRange: Parser[TildeRange] = "~" ~> whiteSpace.? ~> range ^^ { range => TildeRange(range) }
+  def tildeRange: Parser[TildeRange] = "~" ~> ">".? ~> whiteSpace.? ~> range ^^ { range => TildeRange(range) }
 
   def emptyRange: Parser[Range] = """^$""".r ^^ { _ => SimpleRange(VersionRange(None, None, None, None)) }
 
