@@ -1,18 +1,23 @@
 package com.github.sh4869.semver_parser
 
+import scala.language.implicitConversions
 import scala.util.Try
 import scala.util.parsing.combinator._
-import scala.language.implicitConversions
+
 import CommonParser._
 
-/**
-  * Semantic Version
+/** Semantic Version
   *
-  * @param major major number
-  * @param minor minor number
-  * @param patch patch number
-  * @param preRelease preRelease(optional)
-  * @param build build(optional)
+  * @param major
+  *   major number
+  * @param minor
+  *   minor number
+  * @param patch
+  *   patch number
+  * @param preRelease
+  *   preRelease(optional)
+  * @param build
+  *   build(optional)
   */
 case class SemVer(
     major: Long,
@@ -43,6 +48,7 @@ object SemVer {
   def parse(str: String): Option[SemVer] = SemVerParser.semver_parse(str)
 
   def apply(major: Long, minor: Long, patch: Long): SemVer = new SemVer(major, minor, patch, None, None)
+
   implicit object SemVerOrdering extends Ordering[SemVer] {
     override def compare(x: SemVer, y: SemVer): Int = {
       if (x.major != y.major) x.major.compare(y.major)
@@ -53,8 +59,8 @@ object SemVer {
       }
     }
   }
-  
-  implicit def orderingToOrdered(v: SemVer) = Ordered.orderingToOrdered(v)(SemVerOrdering)
+
+  implicit def orderingToOrdered(v: SemVer): Ordered[SemVer] = math.Ordered.orderingToOrdered(v)(SemVerOrdering)
 
   def apply(original: String): SemVer =
     try { parse(original).get }
