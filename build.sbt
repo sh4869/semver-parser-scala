@@ -1,6 +1,6 @@
 ThisBuild / organization := "com.github.sh4869"
 ThisBuild / name := "semver-parser"
-ThisBuild / version := "0.0.4"
+ThisBuild / version := "0.0.5"
 ThisBuild / scalaVersion := "3.0.2"
 
 ThisBuild / crossScalaVersions := Seq("2.11.12", "2.12.15", "2.13.7")
@@ -32,7 +32,7 @@ ThisBuild / developers := List(
     id    = "sh4869",
     name  = "Nobuhiro Kasai",
     email = "nobuk4869@gmail.com",
-    url   = url("https://sh4869.net")
+    url   = url("https://sh4869.sh")
   )
 )
 
